@@ -1,11 +1,8 @@
-# @Version : 1.0
-# @Auther : CarbonOxygen
-# @File : train.py
-# @Time : 2026/5/15 15:37
-
 import torchvision
+import torch
+import time
+from torch import nn
 from torch.utils.tensorboard import SummaryWriter
-from model import *
 from torch.utils.data import DataLoader
 
 # 准备训练数据集
@@ -23,6 +20,10 @@ test_data = torchvision.datasets.CIFAR10(
     download= True
 )
 
+# 定义训练的设备
+device = torch.device("cpu")
+print("使用设备：{}".format(device))
+
 # 看看数据集有多少张图片
 train_data_size = len(train_data)
 test_data_size = len(test_data)
@@ -36,13 +37,35 @@ train_dataloader = DataLoader(train_data, batch_size=64)
 test_dataloader = DataLoader(test_data, batch_size=64)
 
 # 搭建神经网络（CIFAR10是10分类的，构建一个10分类的网络模型）
+# 把神经网络保存到独立的文件中
+class CarbonOxygen(nn.Module):
+    def __init__(self):
+        super().__init__()
+        # 把神经网络搭建成Sequential
+        self.model = nn.Sequential(
+            nn.Conv2d(3, 32, 5, padding=2),
+            nn.MaxPool2d(2),
+            nn.Conv2d(32, 32, 5, padding=2),
+            nn.MaxPool2d(2),
+            nn.Conv2d(32, 64, 5, padding=2),
+            nn.MaxPool2d(2),
+            nn.Flatten(),
+            nn.Linear(1024, 64),
+            nn.Linear(64, 10)
+         )
+
+    def forward(self, x):
+        x = self.model(x)
+        return x
 carbonoxygen = CarbonOxygen()
+carbonoxygen = carbonoxygen.to(device)
 
 # 创建损失函数：交叉熵损失，常用于分类任务
 loss_fn = nn.CrossEntropyLoss()
+loss_fn = loss_fn.to(device)
 
 # 创建优化器：使用SGD随机梯度下降，学习率为0.01
-learning_rate = 1e-2
+learning_rate = 1e-2 # 等效0.01
 optimizer = torch.optim.SGD(carbonoxygen.parameters(), lr=learning_rate)
 
 # 设置训练网络的一些参数
@@ -52,23 +75,27 @@ epoch = 5 # 训练的轮数
 
 # 添加tensorboard
 writer = SummaryWriter("logs_train")
-
+start_time = time.time()
+# 训练循环
 for i in range(epoch):
     print("——————第 {} 轮训练开始——————".format(i+1))
     # 训练步骤开始
     carbonoxygen.train() # 训练模式
     for data in train_dataloader:
             imgs, targets = data
+            imgs = imgs.to(device)
+            targets = targets.to(device)
             output = carbonoxygen(imgs) # 前向传播
             loss = loss_fn(output, targets) # 计算损失
             # 开始优化
             optimizer.zero_grad() # 优化器梯度清零
             loss.backward() # 反向传播
             optimizer.step() # 优化器参数更新
-
             # 优化完毕，训练次数加一
             total_train_step += 1
             if total_train_step % 100 == 0:
+                end_time = time.time()
+                print("训练时间：{}".format(end_time - start_time))
                 print("训练次数：{}，loss：{}".format(total_train_step, loss.item()))
                 writer.add_scalar("train_loss", loss.item(), total_train_step)
 
@@ -79,6 +106,8 @@ for i in range(epoch):
     with torch.no_grad():
         for data in test_dataloader:
             imgs, targets = data
+            imgs = imgs.to(device)
+            targets = targets.to(device)
             outputs = carbonoxygen(imgs) # 前向传播
             loss = loss_fn(outputs, targets) # 计算损失
             total_test_loss += loss.item()

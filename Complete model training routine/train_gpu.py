@@ -1,7 +1,7 @@
 # @Version : 1.0
 # @Auther : CarbonOxygen
-# @File : train.py
-# @Time : 2026/5/15 15:37
+# @File : train_gpu.py
+# @Time : 2026/5/16 14:14
 
 import torchvision
 from torch.utils.tensorboard import SummaryWriter
@@ -37,12 +37,16 @@ test_dataloader = DataLoader(test_data, batch_size=64)
 
 # 搭建神经网络（CIFAR10是10分类的，构建一个10分类的网络模型）
 carbonoxygen = CarbonOxygen()
+if torch.cuda.is_available():
+    carbonoxygen = carbonoxygen.cuda()
 
 # 创建损失函数：交叉熵损失，常用于分类任务
 loss_fn = nn.CrossEntropyLoss()
+if torch.cuda.is_available():
+    loss_fn = loss_fn.cuda()
 
 # 创建优化器：使用SGD随机梯度下降，学习率为0.01
-learning_rate = 1e-2
+learning_rate = 1e-2 # 等效0.01
 optimizer = torch.optim.SGD(carbonoxygen.parameters(), lr=learning_rate)
 
 # 设置训练网络的一些参数
@@ -59,6 +63,9 @@ for i in range(epoch):
     carbonoxygen.train() # 训练模式
     for data in train_dataloader:
             imgs, targets = data
+            if torch.cuda.is_available():
+                imgs = imgs.cuda()
+                targets = targets.cuda()
             output = carbonoxygen(imgs) # 前向传播
             loss = loss_fn(output, targets) # 计算损失
             # 开始优化
@@ -79,6 +86,9 @@ for i in range(epoch):
     with torch.no_grad():
         for data in test_dataloader:
             imgs, targets = data
+            if torch.cuda.is_available():
+                imgs = imgs.cuda()
+                targets = targets.cuda()
             outputs = carbonoxygen(imgs) # 前向传播
             loss = loss_fn(outputs, targets) # 计算损失
             total_test_loss += loss.item()
