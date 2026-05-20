@@ -48,7 +48,7 @@ optimizer = torch.optim.SGD(carbonoxygen.parameters(), lr=learning_rate)
 # 设置训练网络的一些参数
 total_train_step = 0 # 训练的次数
 total_test_step = 0 # 测试的次数
-epoch = 5 # 训练的轮数
+epoch = 10 # 训练的轮数
 
 # 添加tensorboard
 writer = SummaryWriter("logs_train")
